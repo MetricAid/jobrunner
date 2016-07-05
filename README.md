@@ -1,4 +1,4 @@
-# ![](https://raw.githubusercontent.com/bamzi/jobrunner/master/views/runclock.jpg) JobRunner
+# ![](https://raw.githubusercontent.com/MetricAid/jobrunner/master/views/runclock.jpg) JobRunner
 
 JobRunner is framework for performing work asynchronously, outside of the request flow. It comes with cron to schedule and queue job functions for processing at specified time. 
 
@@ -6,14 +6,14 @@ It includes a live monitoring of current schedule and state of active jobs that 
 
 ## Install
 
-`go get github.com/bamzi/jobrunner`
+`go get github.com/MetricAid/jobrunner`
 
 ### Setup
 
 ```go
 package main
 
-import "github.com/bamzi/jobrunner"
+import "github.com/MetricAid/jobrunner"
 
 func main() {
     jobrunner.Start() // optional: jobrunner.Start(pool int, concurrent int) (10, 1)
@@ -34,7 +34,7 @@ func (e ReminderEmails) Run() {
 ```
 
 ### Live Monitoring
-![](https://raw.githubusercontent.com/bamzi/jobrunner/master/views/jobrunner-html.png)
+![](https://raw.githubusercontent.com/MetricAid/jobrunner/master/views/jobrunner-html.png)
 ```go
 
 // Example of GIN micro framework
@@ -45,7 +45,7 @@ func main() {
     routes.GET("/jobrunner/json", JobJson)
 
     // Load template file location relative to the current working directory
-    routes.LoadHTMLGlob("../github.com/bamzi/jobrunner/views/Status.html")
+    routes.LoadHTMLGlob("../github.com/MetricAid/jobrunner/views/Status.html")
 
     // Returns html page at given endpoint based on the loaded
     // template from above

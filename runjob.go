@@ -1,4 +1,4 @@
-// A job runner for executing scheduled or ad-hoc tasks asynchronously from HTTP requests.
+// Package jobrunner for executing scheduled or ad-hoc tasks asynchronously from HTTP requests.
 //
 // It adds a couple of features on top of the Robfig cron package:
 // 1. Protection against job panics.  (They print to ERROR instead of take down the process)
@@ -16,41 +16,44 @@ import (
 	"gopkg.in/robfig/cron.v2"
 )
 
-// Callers can use jobs.Func to wrap a raw func.
+// Func allows callers can use jobs.Func to wrap a raw func.
 // (Copying the type to this package makes it more visible)
 //
 // For example:
-//    jobrunner.Schedule("cron.frequent", jobs.Func(myFunc))
+//    jobrunner.Schedule("cron.frequent", jobrunner.Func(myFunc))
 type Func func()
 
+// Run runs type Func's func()
 func (r Func) Run() { r() }
 
-func Schedule(spec string, job cron.Job) error {
+// Schedule schedules a job to run
+func Schedule(spec string, job cron.Job) (cron.EntryID, error) {
+
 	sched, err := cron.Parse(spec)
 	if err != nil {
-		return err
+		return -1, err
 	}
-	MainCron.Schedule(sched, New(job))
-	return nil
+
+	return mainCron.Schedule(sched, newJob(job)), nil
 }
 
-// Run the given job at a fixed interval.
+// Every runs the given job at a fixed interval.
 // The interval provided is the time between the job ending and the job being run again.
 // The time that the job takes to run is not included in the interval.
-func Every(duration time.Duration, job cron.Job) {
-
-	MainCron.Schedule(cron.Every(duration), New(job))
+func Every(duration time.Duration, job cron.Job) cron.EntryID {
+	return mainCron.Schedule(cron.Every(duration), newJob(job))
 }
 
-// Run the given job right now.
+// Now runs the given job right now.
 func Now(job cron.Job) {
-	go New(job).Run()
+	go newJob(job).Run()
 }
 
-// Run the given job once, after the given delay.
+// In runs the given job once, after the given delay.
 func In(duration time.Duration, job cron.Job) {
+
 	go func() {
 		time.Sleep(duration)
-		New(job).Run()
+		newJob(job).Run()
 	}()
 }

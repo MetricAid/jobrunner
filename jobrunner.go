@@ -1,7 +1,6 @@
 package jobrunner
 
 import (
-	"bytes"
 	"log"
 	"reflect"
 	"runtime/debug"
@@ -12,7 +11,8 @@ import (
 	"gopkg.in/robfig/cron.v2"
 )
 
-type Job struct {
+// innerJob is jobrunner's job implementation
+type innerJob struct {
 	Name    string
 	inner   cron.Job
 	status  uint32
@@ -21,56 +21,56 @@ type Job struct {
 	running sync.Mutex
 }
 
-const UNNAMED = "(unnamed)"
+const unnamed = "(unnamed)"
 
-func New(job cron.Job) *Job {
+func newJob(job cron.Job) *innerJob {
+
 	name := reflect.TypeOf(job).Name()
+
 	if name == "Func" {
-		name = UNNAMED
+		name = unnamed
 	}
-	return &Job{
+
+	return &innerJob{
 		Name:  name,
 		inner: job,
 	}
 }
 
-func (j *Job) StatusUpdate() string {
+func (j *innerJob) statusUpdate() string {
+
 	if atomic.LoadUint32(&j.status) > 0 {
 		j.Status = "RUNNING"
 		return j.Status
 	}
-	j.Status = "IDLE"
-	return j.Status
 
+	j.Status = "IDLE"
+
+	return j.Status
 }
 
-func (j *Job) Run() {
+// Run invokes the current job, should only be run internally
+func (j *innerJob) Run() {
+
 	start := time.Now()
+
 	// If the job panics, just print a stack trace.
 	// Don't let the whole process die.
 	defer func() {
 		if err := recover(); err != nil {
-			var buf bytes.Buffer
-			logger := log.New(&buf, "JobRunner Log: ", log.Lshortfile)
-			logger.Panic(err, "\n", string(debug.Stack()))
+			log.Panic(err, string(debug.Stack()))
 		}
 	}()
 
-	if !selfConcurrent {
-		j.running.Lock()
-		defer j.running.Unlock()
-	}
-
-	if workPermits != nil {
-		workPermits <- struct{}{}
-		defer func() { <-workPermits }()
-	}
+	// so only one instance can run at a time.
+	j.running.Lock()
+	defer j.running.Unlock()
 
 	atomic.StoreUint32(&j.status, 1)
-	j.StatusUpdate()
+	j.statusUpdate()
 
 	defer atomic.StoreUint32(&j.status, 0)
-	defer j.StatusUpdate()
+	defer j.statusUpdate()
 
 	j.inner.Run()
 
